@@ -4,12 +4,16 @@ import networkx as nx
 from typing import Tuple
 
 from src.epinet.models import EpistemicNetwork
+from src.utils.logger import get_logger
+
+
+logger = get_logger(__name__)
 
 
 def plot_network(network: EpistemicNetwork, title: str = None, figsize: Tuple[int, int] = None):
     if not figsize:
         figsize = (10, 5)
-    g = nx.Graph(network.structure)
+    g = network.to_networkx_graph()
     plt.figure(figsize=figsize)
     nx.draw_networkx(g, with_labels=True)
     if title:
