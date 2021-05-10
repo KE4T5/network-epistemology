@@ -83,6 +83,9 @@ class CogsnetSimulation(BaseSimulation):
         print(f'Initial action voters distribution: {self.network.get_actions_voters_nr()}')
         if verbose:
             self.network.describe()
+
+        print(self.network.get_status())
+
         for s in sorted(self.cogsnets.keys()):
             if verbose:
                 logger.info(f'Time step nr {s} started.')
@@ -96,10 +99,12 @@ class CogsnetSimulation(BaseSimulation):
                 if verbose:
                     self.network.describe()
                     logger.info(f'Consensus obtained in iteration nr {i}.')
+                print(self.network.get_status())
                 return self.network.get_state(), s
             else:
                 self.network.update_structure(self.cogsnets[s])
         if verbose:
             self.network.describe()
             logger.info('Consensus was not obtained.')
+        print(self.network.get_status())
         return self.network.get_state(), -1

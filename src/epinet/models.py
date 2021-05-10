@@ -28,9 +28,11 @@ class EpistemicNetwork(ABC):
             consensus_threshold: float,
             trials_nr: int
     ):
-        self.adjacency_list = structure
-        self.id_to_agents = {i: Agent(i, random.uniform(0, 1), structure[i]) for i in
-                             structure.keys()}
+        g = nx.Graph(structure)
+        undirected_structure = nx.convert.to_dict_of_lists(g)
+        self.adjacency_list = undirected_structure
+        self.id_to_agents = {int(i): Agent(int(i), random.uniform(0, 1), undirected_structure[i]) for i in
+                             undirected_structure.keys()}
         self.alpha_action_payoff = alpha_action_payoff
         self.beta_action_payoff = beta_action_payoff
         self.epsilon = self.beta_action_payoff - self.alpha_action_payoff
@@ -87,7 +89,13 @@ class EpistemicNetwork(ABC):
         """
         return self.is_alpha_consensus() or self.is_beta_consensus()
 
+    def get_connected_agents_ids(self) -> Set[str]:
+        connected_agents_ids = [i for i, a in self.id_to_agents.items() if a.neighbors]
+        return connected_agents_ids
+
     def get_state(self, subset_ids: Set[str] = None) -> str:
+        if not subset_ids:
+            subset_ids = self.get_connected_agents_ids()
         state = ''
         if self.is_alpha_consensus(subset_ids):
             state = self.STATE_INCORRECT_CONSENSUS
@@ -100,10 +108,14 @@ class EpistemicNetwork(ABC):
         return state
 
     def get_mean_credence(self, subset_ids: Set[str] = None) -> float:
+        if not subset_ids:
+            subset_ids = self.get_connected_agents_ids()
         agents = self.get_agents(subset_ids)
         return np.mean([agent.credence for agent in agents])
 
     def get_actions_voters_nr(self, subset_ids: Set[str] = None) -> Tuple[int, int]:
+        if not subset_ids:
+            subset_ids = self.get_connected_agents_ids()
         agents = self.get_agents(subset_ids)
         alpha_action_voters_nr = len(list(a for a in agents if a.credence <= self.alpha_action_payoff))
         beta_action_voters_nr = len(list(a for a in agents if a.credence > self.alpha_action_payoff))
@@ -138,6 +150,22 @@ class EpistemicNetwork(ABC):
         print(f'Action voters: {self.get_actions_voters_nr()}')
         print()
 
+    def get_status(self):
+        result = []
+        state = self.get_state()
+        alpha_voters, beta_voters = self.get_actions_voters_nr()
+        mean_credence = self.get_mean_credence()
+        connected_comps = self.get_connected_components()
+        connected_comps_nr = len(connected_comps)
+        for i, subset in enumerate(connected_comps):
+            cc_size = len(subset)
+            cc_state = self.get_state(subset)
+            cc_alpha_voters, cc_beta_voters = self.get_actions_voters_nr(subset)
+            cc_mean_credence = self.get_mean_credence(subset)
+            row = (state, alpha_voters, beta_voters, mean_credence, connected_comps_nr, i, cc_size, cc_state, cc_alpha_voters, cc_beta_voters, cc_mean_credence)
+            result.append(row)
+        return result
+
 
 class StaticEpistemicNetwork(EpistemicNetwork):
     pass
@@ -151,10 +179,13 @@ class DynamicEpistemicNetwork(EpistemicNetwork):
         :param adjacency_list:
         :return:
         """
+        g = nx.Graph(adjacency_list)
+        adjacency_list = nx.convert.to_dict_of_lists(g)
         self.adjacency_list = adjacency_list
+        print(self.adjacency_list)
 
         current_agents_ids = set(self.id_to_agents.keys())
-        new_structure_agent_ids = set(adjacency_list.keys())
+        new_structure_agent_ids = set(self.adjacency_list.keys())
 
         ids_agents_to_detach = current_agents_ids.difference(new_structure_agent_ids)
         ids_agents_to_update = current_agents_ids.intersection(new_structure_agent_ids)
@@ -171,11 +202,11 @@ class DynamicEpistemicNetwork(EpistemicNetwork):
 
         # 2. Update agents present in new structure
         for agent_id in ids_agents_to_update:
-            self.id_to_agents[agent_id].set_neighbors(adjacency_list[agent_id])
+            self.id_to_agents[agent_id].set_neighbors(self.adjacency_list[agent_id])
 
         # 3. Create new agents for ids present only in new structure
         for agent_id in ids_agents_to_create:
-            self.id_to_agents[agent_id] = Agent(agent_id, random.uniform(0, 1), adjacency_list[agent_id])
+            self.id_to_agents[agent_id] = Agent(agent_id, random.uniform(0, 1), self.adjacency_list[agent_id])
 
     def get_state_of_connected_components(self):
         pass
