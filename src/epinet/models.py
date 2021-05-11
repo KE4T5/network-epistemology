@@ -157,12 +157,12 @@ class EpistemicNetwork(ABC):
         mean_credence = self.get_mean_credence()
         connected_comps = self.get_connected_components()
         connected_comps_nr = len(connected_comps)
-        for i, subset in enumerate(connected_comps):
+        for connected_component_id, subset in enumerate(connected_comps):
             cc_size = len(subset)
             cc_state = self.get_state(subset)
             cc_alpha_voters, cc_beta_voters = self.get_actions_voters_nr(subset)
             cc_mean_credence = self.get_mean_credence(subset)
-            row = (state, alpha_voters, beta_voters, mean_credence, connected_comps_nr, i, cc_size, cc_state, cc_alpha_voters, cc_beta_voters, cc_mean_credence)
+            row = (state, alpha_voters, beta_voters, mean_credence, connected_comps_nr, connected_component_id, cc_size, cc_state, cc_alpha_voters, cc_beta_voters, cc_mean_credence)
             result.append(row)
         return result
 
