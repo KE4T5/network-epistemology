@@ -15,7 +15,15 @@ def plot_network(network: EpistemicNetwork, title: str = None, figsize: Tuple[in
         figsize = (10, 5)
     g = network.to_networkx_graph()
     plt.figure(figsize=figsize)
-    nx.draw_networkx(g, with_labels=True)
+
+    color_map = []
+    for val in [val for (node, val) in g.degree()]:
+        if val < 1:
+            color_map.append('crimson')
+        else:
+            color_map.append('royalblue')
+
+    nx.draw_networkx(g, node_color=color_map, with_labels=True)
     if title:
         plt.title(title)
     plt.show()

@@ -29,6 +29,7 @@ class EpistemicNetwork(ABC):
             trials_nr: int
     ):
         g = nx.Graph(structure)
+        g.remove_edges_from(nx.selfloop_edges(g))
         undirected_structure = nx.convert.to_dict_of_lists(g)
         self.adjacency_list = undirected_structure
         self.id_to_agents = {int(i): Agent(int(i), random.uniform(0, 1), undirected_structure[i]) for i in
@@ -83,14 +84,16 @@ class EpistemicNetwork(ABC):
         is_beta_consensus = all(agent.credence > self.consensus_threshold for agent in agents)
         return is_beta_consensus
 
-    def is_consensus(self) -> bool:
+    def is_consensus(self, subset_ids: Set[str] = None) -> bool:
         """
         Checks if there is a consensus regarding superiority of one of the actions.
         """
-        return self.is_alpha_consensus() or self.is_beta_consensus()
+        if not subset_ids:
+            subset_ids = self.get_connected_agents_ids()
+        return self.is_alpha_consensus(subset_ids) or self.is_beta_consensus(subset_ids)
 
     def get_connected_agents_ids(self) -> Set[str]:
-        connected_agents_ids = [i for i, a in self.id_to_agents.items() if a.neighbors]
+        connected_agents_ids = {i for i, a in self.id_to_agents.items() if a.neighbors}
         return connected_agents_ids
 
     def get_state(self, subset_ids: Set[str] = None) -> str:
@@ -166,6 +169,27 @@ class EpistemicNetwork(ABC):
             result.append(row)
         return result
 
+    def get_current_status(self):
+        connected_comps = self.get_connected_components()
+        biggest_cc = max(connected_comps, key=len)
+        alpha_voters, beta_voters = self.get_actions_voters_nr()
+        biggest_cc_av, biggest_cc_bv = self.get_actions_voters_nr(biggest_cc)
+        status = {
+            'full_net_state': self.get_state(),
+            'full_net_av': alpha_voters,
+            'full_net_bv': beta_voters,
+            'full_net_cred': self.get_mean_credence(),
+            'big_cc_state': self.get_state(biggest_cc),
+            'big_cc_av': biggest_cc_av,
+            'big_cc_bv': biggest_cc_bv,
+            'big_cc_cred': self.get_mean_credence(biggest_cc),
+            #'rest_cc_status': 1,
+            #'rest_cc_av': 1,
+            #'rest_cc_bv': 1,
+            #'rest_cc_cred': 1
+        }
+        return status
+
 
 class StaticEpistemicNetwork(EpistemicNetwork):
     pass
@@ -180,9 +204,10 @@ class DynamicEpistemicNetwork(EpistemicNetwork):
         :return:
         """
         g = nx.Graph(adjacency_list)
+        g.remove_edges_from(nx.selfloop_edges(g))
         adjacency_list = nx.convert.to_dict_of_lists(g)
         self.adjacency_list = adjacency_list
-        print(self.adjacency_list)
+        #print(self.adjacency_list)
 
         current_agents_ids = set(self.id_to_agents.keys())
         new_structure_agent_ids = set(self.adjacency_list.keys())
@@ -191,9 +216,9 @@ class DynamicEpistemicNetwork(EpistemicNetwork):
         ids_agents_to_update = current_agents_ids.intersection(new_structure_agent_ids)
         ids_agents_to_create = new_structure_agent_ids.difference(current_agents_ids)
 
-        logger.info(f'Agents to detach: {ids_agents_to_detach}')
-        logger.info(f'Agents to update: {ids_agents_to_update}')
-        logger.info(f'Agents to create: {ids_agents_to_create}')
+        #logger.info(f'Agents to detach: {ids_agents_to_detach}')
+        #logger.info(f'Agents to update: {ids_agents_to_update}')
+        #logger.info(f'Agents to create: {ids_agents_to_create}')
 
         # 1.  agents not present in new structure
         for agent_id in ids_agents_to_detach:

@@ -9,13 +9,13 @@ logger = get_logger(__name__)
 
 class Agent:
 
-    def __init__(self, agent_id: str, credence: float, neighbors: Set[str]):
+    def __init__(self, agent_id: int, credence: float, neighbors: Set[str]):
         self.id = agent_id
         self.credence = credence
         self.neighbors = neighbors
         self.trials_nr = 0
         self.successes_nr = 0
-        logger.info(f'Agent {agent_id} created successfully!')
+        #logger.info(f'Agent {agent_id} created successfully!')
 
     def get_evidence(self, trials_nr: int, alpha_action_payoff: float, beta_action_payoff: float):
         # TODO: documentation

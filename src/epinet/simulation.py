@@ -68,49 +68,43 @@ class Simulation(BaseSimulation):
 
 class CogsnetSimulation(BaseSimulation):
 
-    def __init__(self, network: EpistemicNetwork, nr_iterations: int, cogsnets: Dict[int, Dict[str, Set[str]]]):
+    def __init__(self, network: DynamicEpistemicNetwork, nr_iterations: int, cogsnets: Dict[int, Dict[str, Set[str]]]):
         super().__init__(network, nr_iterations)
         self.cogsnets = cogsnets
 
-    def play_iteration(self, network):
-        network.run_evidence_collection()
-        network.run_credence_update()
+    def play_iteration(self):
+        self.network.run_evidence_collection()
+        self.network.run_credence_update()
 
     def run(self, verbose: bool = False):
         # Should return simulation results -> step by step (day by day)
         # TODO: move to newtwork init before sim start -> self.network = DynamicEpistemicNetwork(self.structures[min(self.structures.keys())])
         # TODO: change to logging
-        print(f'Initial mean credence: {self.network.get_mean_credence()}')
-        print(f'Initial action voters distribution: {self.network.get_actions_voters_nr()}')
-        if verbose:
-            self.network.describe()
+        #print(f'Initial mean credence: {self.network.get_mean_credence()}')
+        #print(f'Initial action voters distribution: {self.network.get_actions_voters_nr()}')
 
-        print(self.network.get_status())
+        time_step_results = {}
+        consensus_time = None
+
+        min_ts = int(min(self.cogsnets.keys()))
+        max_ts = max(self.cogsnets.keys())
 
         for s in sorted(self.cogsnets.keys()):
-            if verbose:
-                logger.info(f'Time step nr {s} started.')
             i = 0
-            while i < self.nr_iterations and not self.network.is_consensus():
-                if verbose:
-                    logger.info(f'Iteration nr {i} started.')
-                self.play_iteration(self.network)
+            while i < self.nr_iterations:  # and not self.network.is_consensus(): TODO: reconcider it
+                self.play_iteration()
                 i += 1
 
-            # Remove early simulation stopping: TODO: roconcider it
-            #if self.network.is_consensus():
+            # Remove early simulation stopping: TODO: reconcider it
+            if self.network.is_consensus():
+                consensus_time = int(s) - min_ts
             #    if verbose:
             #        self.network.describe()
             #        logger.info(f'Consensus obtained in iteration nr {i}.')
             #    print(self.network.get_status())
             #    return self.network.get_state(), s
-            else:
-                self.network.update_structure(self.cogsnets[s])
-        if verbose:
-            self.network.describe()
-            logger.info('Consensus was not obtained.')
-        print(self.network.get_status())
+            #else:
+            time_step_results[s] = self.network.get_current_status()
+            self.network.update_structure(self.cogsnets[s])
 
-        # TODO: implement returning results in format of: res = {step_nr: row_of_state}
-
-        return self.network.get_state(), -1
+        return time_step_results, time_step_results[max_ts], consensus_time
