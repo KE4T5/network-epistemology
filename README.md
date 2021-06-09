@@ -1,1 +1,1 @@
-# DEpiNet
+# network-epistemology
